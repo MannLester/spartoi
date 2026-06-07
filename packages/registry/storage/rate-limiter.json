@@ -1,0 +1,41 @@
+{
+  "id": "nextjs-native-rate-limiter",
+  "name": "Native In-Memory Rate Limiter",
+  "version": "1.0.0",
+  "description": "Pure TypeScript in-memory rate limiter using a global Map cache. Zero external dependencies, zero environment variables required.",
+  "ecosystem": {
+    "language": "typescript",
+    "framework": "nextjs",
+    "runtime": "universal"
+  },
+  "dependencies": {
+    "npm": []
+  },
+  "environmentVariables": [],
+  "files": [
+    {
+      "targetPath": "lib/backend/rate-limiter.ts",
+      "templateUrl": "https://raw.githubusercontent.com/placeholder/backend-shadcn/main/templates/rate-limiter.ts"
+    }
+  ],
+  "integration": {
+    "snippet": "import { rateLimit } from '@/lib/backend/rate-limiter';\n\nconst { success, remaining } = rateLimit({\n  key: 'api-route-limit:' + ipAddress,\n  limit: 10,\n  windowMs: 60000\n});\nif (!success) return new Response('Too Many Requests', { status: 429 });",
+    "parameters": [
+      {
+        "name": "key",
+        "type": "string",
+        "description": "A unique identifier for the client (e.g., user ID or IP address)."
+      },
+      {
+        "name": "limit",
+        "type": "number",
+        "description": "Maximum number of allowed requests within the time window."
+      },
+      {
+        "name": "windowMs",
+        "type": "number",
+        "description": "The duration of the tracking window in milliseconds."
+      }
+    ]
+  }
+}

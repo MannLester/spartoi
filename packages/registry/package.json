@@ -1,0 +1,9 @@
+{
+    "name": "backend-shadcn-registry",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "devDependencies": {
+        "@types/node": "^20.12.7"
+    }
+}

@@ -1,0 +1,37 @@
+// Ejected Standalone Module: Native Memory-Map Rate Limiter
+// Zero external dependencies, zero infrastructure overhead.
+
+const tracker = new Map<string, { count: number; resetTime: number }>();
+
+export interface RateLimitOptions {
+  key: string;
+  limit: number;
+  windowMs: number;
+}
+
+export interface RateLimitResult {
+  success: boolean;
+  remaining: number;
+}
+
+export function rateLimit(options: RateLimitOptions): RateLimitResult {
+  const now = Date.now();
+  const record = tracker.get(options.key);
+
+  // If no record exists or the current window time frame has expired, build a fresh cache slot
+  if (!record || now > record.resetTime) {
+    const newRecord = { count: 1, resetTime: now + options.windowMs };
+    tracker.set(options.key, newRecord);
+    return { success: true, remaining: options.limit - 1 };
+  }
+
+  // If request metrics hit the ceiling limit, deny access execution
+  if (record.count >= options.limit) {
+    return { success: false, remaining: 0 };
+  }
+
+  // Increment standard count register metrics
+  record.count += 1;
+  tracker.set(options.key, record);
+  return { success: true, remaining: options.limit - record.count };
+}
