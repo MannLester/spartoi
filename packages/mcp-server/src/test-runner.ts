@@ -8,7 +8,7 @@ const cwd = process.cwd();
 function resetEnvironment() {
   console.log('🧹 Preparing clean slate for end-to-end audit...');
   const filesToDelete = [
-    path.join(cwd, 'components.json'),
+    path.join(cwd, 'spartoi.json'),
     path.join(cwd, 'lib', 'backend', 'rate-limiter.ts'),
     path.join(cwd, 'lib', 'backend', 'README.md')
   ];
@@ -41,9 +41,9 @@ async function runIntegrationAudit() {
   execSync('npx tsx packages/cli/src/index.ts init', { stdio: 'inherit' });
 
   // Verify initialization state parameters
-  const configPath = path.join(cwd, 'components.json');
+  const configPath = path.join(cwd, 'spartoi.json');
   if (!fs.existsSync(configPath)) {
-    throw new Error('Audit Failure: init_project failed to generate components.json');
+    throw new Error('Audit Failure: init_project failed to generate spartoi.json');
   }
   console.log('-> Confirmed configuration state mapping generated correctly.\n');
 
@@ -68,8 +68,8 @@ async function runIntegrationAudit() {
   console.log('-> Confirmed README.md exists inside workspace paths.');
 
   // 4. Verify cryptographic drift state integration matches
-  const componentsJsonContent = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-  const savedHash = componentsJsonContent.installedModules['nextjs-native-rate-limiter']?.fileHash;
+  const spartoiJsonContent = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+  const savedHash = spartoiJsonContent.installedModules['nextjs-native-rate-limiter']?.fileHash;
 
   if (!savedHash) {
     throw new Error('Audit Failure: System tracking state metadata missing cryptographic fingerprint.');

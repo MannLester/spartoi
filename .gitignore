@@ -1,4 +1,45 @@
-lib/
+# =========================================================================
+# Spartoi Core Engine - Production Git Ignore Configuration
+# =========================================================================
+
+# 1. Dependency Blacklist
+# Block heavy external vendor chunks to prevent repo bloat and platform conflicts
 node_modules/
-package-lock.json
-components.json
+jspm_packages/
+web_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 2. Production Compilation Outputs
+# Block JavaScript files built dynamically by the TypeScript compiler (tsc)
+dist/
+out/
+build/
+lib-dist/
+*.tsbuildinfo
+
+# 3. Volatile Test Simulation State Remnants
+# Block the temporary local folders and state anchors created by the test-runner
+spartoi.json
+/lib/
+.spartoi/
+
+# 4. IDE, Code Editors, and Volatile Workspace Configurations
+.idea/
+.vscode/
+*.suo
+.ntvs
+*.njsproj
+*.sln
+*.sw?
+.classpath
+.project
+.settings/
+
+# 5. Operating System Junk
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
