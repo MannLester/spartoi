@@ -1,0 +1,13 @@
+{
+  "id": "fastapi-api-key-auth",
+  "name": "FastAPI API Key Authenticator",
+  "version": "1.0.0",
+  "description": "Zero-dependency, high-performance API key validation security header check for FastAPI.",
+  "ecosystem": {
+    "language": "python",
+    "framework": "fastapi"
+  },
+  "integration": {
+    "snippet": "from .api_key_auth import APIKeySecurity\n\n@app.get('/secure')\ndef protected_route(user = Depends(APIKeySecurity)):\n    return {'status': 'authorized'}"
+  }
+}
