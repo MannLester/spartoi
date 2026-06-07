@@ -1,0 +1,13 @@
+{
+    "id": "native-jwt-autth",
+    "name": "Native JWT Authentication",
+    "version": "1.0.0",
+    "description": "Zero-dependency JWT verification middleware using native runtime Web Crypto APIs.",
+    "ecosystem": {
+        "language": "typescript",
+        "framework": "nextjs"
+    },
+    "integration": {
+        "snippet": "import { verifyToken } from '{{IMPORT_ALIAS}}/jwt-auth';\n\nconst payload = await verifyToken(token, process.env.JWT_SECRET);" 
+    }
+}
