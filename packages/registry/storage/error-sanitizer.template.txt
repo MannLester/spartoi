@@ -1,0 +1,40 @@
+export class AppError extends Error {
+    public readonly statusCode: number;
+    public readonly isOperational: boolean;
+
+    constructor(message: string, statusCode = 400, isOperational = true) {
+        super(message);
+        Object.setPrototypeOf(this, new AppError.prototype);
+        this.statusCode = statusCode;
+        this.isOperational = isOperational;
+        Error.captureStackTrace(this, this.constructor);
+    }
+}
+
+export function handleApiError(error: unknown) {
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (error instanceof AppError) {
+        return {
+            status: 'fail',
+            statusCode: error.statusCode,
+            response: {
+                success: false,
+                message: error.message,
+                ...(isProduction ? {} : { stack: error.stack })
+            }
+        };
+    }
+
+    const nativeError = error instanceof Error ? error : new Error(String(error));
+
+    return {
+        status: 'error',
+        statusCode: 500,
+        response: {
+            success: false,
+            message: isProduction ? 'Internal server configuration exception encountered.' : nativeError.message,
+            ...(isProduction ? {} : { stack: nativeError.stack })
+        }
+    };
+}

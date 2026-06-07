@@ -1,0 +1,13 @@
+{
+    "id": "error-sanitizer",
+    "name" : "Global Error Sanitizer",
+    "version": "1.0.0",
+    "description": "Type-safe centralized error formatting middleware that sanitizes operational vs server exceptions",
+    "ecosystem": {
+        "language": "typescript",
+        "framework": "nextjs"
+    },
+    "integration": {
+        "snippet": "import { handleApiError } from '{{IMPORT_ALIAS}}/error-sanitizer';\n\ntry {\n //your route logic\n} catch (error) {\n return handleApiError(error);\n"
+    }
+}
