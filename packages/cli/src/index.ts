@@ -53,103 +53,148 @@ program
       installedModules: {}
     };
 
-    const targetConfigPath = path.join(cwd, 'components.json');
+    const targetConfigPath = path.join(cwd, 'spartoi.json');
     fs.writeFileSync(targetConfigPath, JSON.stringify(configPayload, null, 2), 'utf-8');
-    console.log('✅ Successfully generated root tracking anchor state: components.json');
+    console.log('✅ Successfully generated root tracking anchor state: spartoi.json');
   });
 
 // --- CHUNK 3 & 4: INJECTION TRANSPORT & VERIFICATION CORE ---
+// --- CHUNK 3 & 4: INJECTION TRANSPORT & VERIFICATION CORE ---
 program
   .command('add')
-  .description('Inject a standalone backend feature component into your project')
+  .description('Inject a standalone backend feature component from the cloud registry')
   .argument('<module-id>', 'The identification key token string of the target module')
   .option('-f, --force', 'Force overwrite modifications if code drift exists')
-  .action((moduleId, options) => {
+  .action(async (moduleId, options) => {
     const cwd = process.cwd();
-    const configPath = path.join(cwd, 'components.json');
+    const configPath = path.join(cwd, 'spartoi.json');
 
     if (!fs.existsSync(configPath)) {
       console.error('❌ Error: Project configuration tracking file not found. Run "init" command first.');
       process.exit(1);
     }
 
+    const normalizedModuleId = moduleId.trim();
+    
+    // Dynamic filename mapper to support our expanding catalog seamlessly
+    const fileMapping: Record<string, string> = {
+      'nextjs-native-rate-limiter': 'rate-limiter',
+      'native-jwt-auth': 'jwt-auth',
+      'error-sanitizer': 'error-sanitizer'
+    };
+    const fileNameKey = fileMapping[normalizedModuleId] || normalizedModuleId;
+
     const localConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
     const destinationFolder = path.join(cwd, localConfig.targetDirectory);
-    const targetFileDestination = path.join(destinationFolder, 'rate-limiter.ts');
+    const targetFileDestination = path.join(destinationFolder, `${fileNameKey}.ts`);
 
-    // CHUNK 4 DRIFT ASSESSMENT ANALYSIS: Check if file already exists locally
+    let isStagedRun = false;
+    let stagedPath = '';
+
+    // 1. Drift Protection Check
     if (fs.existsSync(targetFileDestination)) {
       console.log('🔍 Existing module file detected. Analyzing code drift configurations...');
-      
-      const existingRecord = localConfig.installedModules[moduleId];
+      const existingRecord = localConfig.installedModules[normalizedModuleId];
       
       if (existingRecord && existingRecord.fileHash) {
         const currentDiskContent = fs.readFileSync(targetFileDestination, 'utf-8');
         const currentDiskHash = calculateHash(currentDiskContent);
 
-        // Compare current disk snapshot to historical registration hash
         if (currentDiskHash !== existingRecord.fileHash) {
-          console.warn('⚠️ WARNING: Local modifications detected inside: ' + localConfig.targetDirectory + '/rate-limiter.ts');
+          console.warn(`⚠️ WARNING: Local modifications detected inside: ${localConfig.targetDirectory}/${fileNameKey}.ts`);
           
           if (!options.force) {
-            console.error('❌ Overwrite Blocked: Your file has custom logic modifications.');
-            console.error('   To safely bypass this safety valve protection block, append the "--force" flag.');
-            process.exit(1);
+            console.warn('✨ Code drift detected! Diverting target to local staging buffer...');
+            
+            const sandboxDir = path.join(cwd, '.spartoi', 'tmp');
+            fs.mkdirSync(sandboxDir, { recursive: true });
+            
+            stagedPath = path.join(sandboxDir, `${fileNameKey}.ts`);
+            isStagedRun = true;
+            
+            console.log(` -> Staging incoming template structure into sandbox: .spartoi/tmp/${fileNameKey}.ts`);
+          } else {
+            console.log('   "--force" flag detected. Overriding safety blocks to execute package payload refresh...');
           }
-          console.log('   "--force" flag detected. Overriding safety blocks to execute package payload refresh...');
         } else {
           console.log('   No file mutations discovered. Proceeding with clean configuration updates.');
         }
       }
     }
 
-    console.log('📦 Extracting component feature module: [' + moduleId + ']...');
+    console.log('🌐 Fetching component registry profile from cloud distribution channel...');
 
-    const registryManifestPath = path.join(cwd, 'packages', 'registry', 'storage', 'rate-limiter.json');
-    const registryTemplatePath = path.join(cwd, 'packages', 'registry', 'storage', 'rate-limiter.template.txt');
+    // Fully dynamic cloud vectors matching your GitHub workspace
+    const baseUrl = 'https://raw.githubusercontent.com/MannLester/spartoi/main/packages/registry/storage/';
+    const manifestUrl = `${baseUrl}${fileNameKey}.json`;
+    const templateUrl = `${baseUrl}${fileNameKey}.template.txt`;
 
-    if (!fs.existsSync(registryManifestPath) || !fs.existsSync(registryTemplatePath)) {
-      console.error('❌ Error: Core component not found inside registry database mappings.');
+    try {
+      const networkHeaders = { 'User-Agent': 'Spartoi-CLI-Engine' };
+
+      // Stream Manifest Metadata from GitHub
+      const manifestResponse = await fetch(manifestUrl, { headers: networkHeaders });
+      if (!manifestResponse.ok) {
+        throw new Error(`Cloud Registry returned HTTP status ${manifestResponse.status} for ${fileNameKey}.json`);
+      }
+      const manifestMetadata = await manifestResponse.json() as any;
+
+      // Stream Code Template from GitHub
+      const templateResponse = await fetch(templateUrl, { headers: networkHeaders });
+      if (!templateResponse.ok) {
+        throw new Error(`Cloud Registry returned HTTP status ${templateResponse.status} for ${fileNameKey}.template.txt`);
+      }
+      const rawTemplateContent = await templateResponse.text();
+
+      console.log(`📦 Extracting component feature module: [${moduleId}]...`);
+      fs.mkdirSync(destinationFolder, { recursive: true });
+
+      const trackingFingerprint = calculateHash(rawTemplateContent);
+      
+      // 2. Determine exact write destination based on staging status
+      const actualWriteDestination = isStagedRun ? stagedPath : targetFileDestination;
+      fs.writeFileSync(actualWriteDestination, rawTemplateContent, 'utf-8');
+
+      if (isStagedRun) {
+        console.log(`💾 Incoming cloud source safely staged at: .spartoi/tmp/${fileNameKey}.ts`);
+        console.warn('⚠️ Action Required: Resolve the logic differences manually or run with --force to overwrite your changes.');
+        process.exit(0); 
+      }
+
+      console.log(` -> Generated standalone component source: ${localConfig.targetDirectory}/${fileNameKey}.ts`);
+
+      // Inject Documentation
+      const readmeContent = [
+        `# Local Backend Module: ${manifestMetadata.name}`,
+        'Generated by Spartoi Core Framework remote cloud engines.',
+        '',
+        '## Component Specifications Summary',
+        `* Description: ${manifestMetadata.description}`,
+        `* Framework Target Environment: ${manifestMetadata.ecosystem.framework}`,
+        '',
+        '## AI Standard Usage Code Snippet Hook',
+        '```typescript',
+        manifestMetadata.integration.snippet,
+        '```'
+      ].join('\n');
+
+      fs.writeFileSync(path.join(destinationFolder, 'README.md'), readmeContent, 'utf-8');
+      console.log(` -> Injected semantic AI documentation file: ${localConfig.targetDirectory}/README.md`);
+
+      // Sync local state tracking
+      localConfig.installedModules[moduleId] = {
+        version: manifestMetadata.version,
+        installedAt: new Date().toISOString(),
+        fileHash: trackingFingerprint
+      };
+      fs.writeFileSync(configPath, JSON.stringify(localConfig, null, 2), 'utf-8');
+      console.log('✅ Component deployment from cloud execution completed successfully.');
+
+    } catch (networkError: any) {
+      console.error('❌ Network Connection Failure: Unable to fetch assets from the live cloud registry.');
+      console.error(`   Diagnostic Reason: ${networkError.message}`);
       process.exit(1);
     }
-
-    fs.mkdirSync(destinationFolder, { recursive: true });
-
-    const rawTemplateContent = fs.readFileSync(registryTemplatePath, 'utf-8');
-    
-    // Calculate fingerprint hash of the exact pristine code template being written
-    const trackingFingerprint = calculateHash(rawTemplateContent);
-
-    fs.writeFileSync(targetFileDestination, rawTemplateContent, 'utf-8');
-    console.log('  -> Generated standalone component source: ' + localConfig.targetDirectory + '/rate-limiter.ts');
-
-    const manifestMetadata = JSON.parse(fs.readFileSync(registryManifestPath, 'utf-8'));
-    const readmeContent = [
-      '# Local Backend Module: ' + manifestMetadata.name,
-      'Generated by Spartoi Framework tooling mechanisms.',
-      '',
-      '## Component Specifications Summary',
-      '* Description: ' + manifestMetadata.description,
-      '* Framework Target Environment: ' + manifestMetadata.ecosystem.framework,
-      '',
-      '## AI Standard Usage Code Snippet Hook',
-      '```typescript',
-      manifestMetadata.integration.snippet,
-      '```'
-    ].join('\n');
-
-    fs.writeFileSync(path.join(destinationFolder, 'README.md'), readmeContent, 'utf-8');
-    console.log('  -> Injected semantic AI documentation file: ' + localConfig.targetDirectory + '/README.md');
-
-    // Update root state tracking mapping with cryptographic fingerprint hash data
-    localConfig.installedModules[moduleId] = {
-      version: manifestMetadata.version,
-      installedAt: new Date().toISOString(),
-      fileHash: trackingFingerprint
-    };
-    fs.writeFileSync(configPath, JSON.stringify(localConfig, null, 2), 'utf-8');
-
-    console.log('✅ Component deployment execution completed successfully.');
   });
 
 program.parse();
