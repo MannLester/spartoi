@@ -93,7 +93,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 
   // ROUTE B: Component Injection tool mapping
-  // ROUTE B: Component Injection tool mapping
   if (name === 'inject_component') {
     const moduleId = (args as { moduleId: string })?.moduleId;
     const configPath = path.join(cwd, 'spartoi.json');
@@ -105,34 +104,46 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       };
     }
 
-    // Dynamic filename mapper to support our expanding catalog seamlessly
-    const fileMapping: Record<string, string> = {
-      'nextjs-native-rate-limiter': 'rate-limiter',
-      'native-jwt-auth': 'jwt-auth',
-      'error-sanitizer': 'error-sanitizer'
+    const normalizedModuleId = moduleId.trim();
+
+    // Dynamic file & language extension mapper to support multi-language ecosystems seamlessly
+    const fileMapping: Record<string, { name: string; ext: string }> = {
+      'nextjs-native-rate-limiter': { name: 'rate-limiter', ext: 'ts' },
+      'native-jwt-auth': { name: 'jwt-auth', ext: 'ts' },
+      'error-sanitizer': { name: 'error-sanitizer', ext: 'ts' },
+      'fastapi-api-key-auth': { name: 'api_key_auth', ext: 'py' }
     };
-    const fileNameKey = fileMapping[moduleId] || moduleId;
+
+    const mappingMeta = fileMapping[normalizedModuleId] || { name: normalizedModuleId, ext: 'ts' };
+    const fileNameKey = mappingMeta.name;
+    const fileExtension = mappingMeta.ext;
 
     const localConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    const destinationFolder = path.join(cwd, localConfig.targetDirectory);
-    const targetFileDestination = path.join(destinationFolder, `${fileNameKey}.ts`);
+    
+    // Adjust target folder dynamically if injecting Python modules vs TypeScript
+    let targetDirOverride = localConfig.targetDirectory;
+    if (fileExtension === 'py' && localConfig.targetDirectory === './lib/backend') {
+      targetDirOverride = './lib/backend/python'; // Clean separation context folder
+    }
+
+    const destinationFolder = path.join(cwd, targetDirOverride);
+    const targetFileDestination = path.join(destinationFolder, `${fileNameKey}.${fileExtension}`);
 
     let isStagedRun = false;
     let stagedPath = '';
 
     // Run safety verification checks inside the protocol context execution
     if (fs.existsSync(targetFileDestination)) {
-      const existingRecord = localConfig.installedModules[moduleId];
+      const existingRecord = localConfig.installedModules[normalizedModuleId];
       if (existingRecord && existingRecord.fileHash) {
         const currentDiskContent = fs.readFileSync(targetFileDestination, 'utf-8');
         const currentDiskHash = calculateHash(currentDiskContent);
 
         if (currentDiskHash !== existingRecord.fileHash) {
-          // Instead of a hard failure block, divert to the staging sandbox
           const sandboxDir = path.join(cwd, '.spartoi', 'tmp');
           fs.mkdirSync(sandboxDir, { recursive: true });
           
-          stagedPath = path.join(sandboxDir, `${fileNameKey}.ts`);
+          stagedPath = path.join(sandboxDir, `${fileNameKey}.${fileExtension}`);
           isStagedRun = true;
         }
       }
@@ -167,7 +178,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return {
           content: [{ 
             type: 'text', 
-            text: `⚠️ Code drift detected! Incoming cloud source safely staged at: .spartoi/tmp/${fileNameKey}.ts\nAction Required: Read this file and merge any updates manually into your modified local version.` 
+            text: `⚠️ Code drift detected! Incoming cloud source safely staged at: .spartoi/tmp/${fileNameKey}.${fileExtension}\nAction Required: Read this file and merge any updates manually into your modified local version.` 
           }],
         };
       }
@@ -179,14 +190,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         '## Component Specifications Summary',
         `* Description: ${manifestMetadata.description}`,
         '## AI Standard Usage Code Snippet Hook',
-        '```typescript',
+        `\`\`\`${fileExtension}`,
         manifestMetadata.integration.snippet,
         '```'
       ].join('\n');
 
       fs.writeFileSync(path.join(destinationFolder, 'README.md'), readmeContent, 'utf-8');
 
-      localConfig.installedModules[moduleId] = {
+      localConfig.installedModules[normalizedModuleId] = {
         version: manifestMetadata.version,
         installedAt: new Date().toISOString(),
         fileHash: trackingFingerprint
@@ -194,7 +205,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       fs.writeFileSync(configPath, JSON.stringify(localConfig, null, 2), 'utf-8');
 
       return {
-        content: [{ type: 'text', text: `✅ Component [${moduleId}] safely injected from cloud into local workspace paths.` }],
+        content: [{ type: 'text', text: `✅ Component [${normalizedModuleId}] safely injected from cloud into local workspace paths.` }],
       };
 
     } catch (networkError: any) {
@@ -204,7 +215,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       };
     }
   }
-
   throw new Error('Requested tool function route not mapped.');
 });
 
